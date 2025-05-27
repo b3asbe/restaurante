@@ -17,4 +17,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+//Listar
 Route::get('productos',[ProductoController::class,'productos']);
+
+//Insertar
+Route::get('productos/insertar', [ProductoController::class, 'insertarProducto']);
+
+//Actualizar
+Route::get('productos/actualizar/{id}', [ProductoController::class, 'actualizarProducto']);
+
+//Eliminar
+Route::get('productos/eliminar-producto/{id}', [ProductoController::class, 'eliminarProducto']);
