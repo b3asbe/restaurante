@@ -5,19 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Menus extends Model
+class Promociones extends Model
 {
     use HasFactory;
 
-    protected $table = 'menus';
+    protected $table = "promociones";
 
     protected $fillable = [
         'id',
         'nombre',
-        'descripcion',
+        'descuento',
+        'fecha_inicio',
+        'fecha_fin',
     ];
     public $timestamps = false;
 }
-
-
-
