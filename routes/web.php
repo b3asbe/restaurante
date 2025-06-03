@@ -128,3 +128,5 @@ Route::get('movimientos-insumo/actualizar/{id}', [MovimientosInsumoController::c
 
 // Eliminar un movimiento por ID
 Route::get('movimientos-insumo/eliminar/{id}', [MovimientosInsumoController::class, 'eliminarMovimiento']);
+
+
