@@ -5,18 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Mesas extends Model
+class Pedidos extends Model
 {
     use HasFactory;
 
-    protected $table = 'mesas';
+    protected $table = 'pedidos';
 
     protected $fillable = [
         'id',
-        'numero',
-        'capacidad',
+        'usuario_id',
+        'mesa_id',
+        'estado_id',
+        'fecha_creacion',
+        'fecha_entrega',
     ];
 
     public $timestamps = false;
 }
-

@@ -5,18 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Mesas extends Model
+class Caja extends Model
 {
     use HasFactory;
 
-    protected $table = 'mesas';
+    protected $table = 'cierres_caja';
 
     protected $fillable = [
         'id',
-        'numero',
-        'capacidad',
+        'fecha',
+        'total',
+        'usuario_id',
     ];
 
     public $timestamps = false;
 }
-

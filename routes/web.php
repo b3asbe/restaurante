@@ -9,6 +9,12 @@ use App\Http\Controllers\PromocionesController;
 use App\Http\Controllers\EstadoPedidosController;
 use App\Http\Controllers\ReservasController;
 use App\Http\Controllers\MovimientosInsumoController;
+use App\Http\Controllers\MesasController;
+use App\Http\Controllers\CajaController;
+use App\Http\Controllers\ProductosMenusController;
+use App\Http\Controllers\PedidosController;
+use App\Http\Controllers\PedidoProductosController;
+use App\Http\Controllers\OrganigramaController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -130,3 +136,87 @@ Route::get('movimientos-insumo/actualizar/{id}', [MovimientosInsumoController::c
 Route::get('movimientos-insumo/eliminar/{id}', [MovimientosInsumoController::class, 'eliminarMovimiento']);
 
 
+
+
+// Listar todas las mesas
+Route::get('mesas', [MesasController::class, 'mesas']);
+
+// Insertar una nueva mesa
+Route::get('mesas/insertar/{id}', [MesasController::class, 'insertarMesa']);
+
+// Actualizar mesa por ID
+Route::get('mesas/actualizar/{id}', [MesasController::class, 'actualizarMesa']);
+
+// Eliminar mesa por ID
+Route::get('mesas/eliminar/{id}', [MesasController::class, 'eliminarMesa']);
+
+
+
+
+
+// Listar todos los cierres de caja
+Route::get('cierres_caja', [CajaController::class, 'cierresCaja']);
+
+
+Route::get('cierres_caja/fecha/{fecha}', [CajaController::class, 'cierresPorFecha']);
+
+
+
+// Listar todas las relaciones menú‐producto
+Route::get('productos_menus', [ProductosMenusController::class, 'relaciones']);
+
+// Insertar nueva relación (ejemplo con valores estáticos)
+Route::get('productos_menus/insertar', [ProductosMenusController::class, 'insertarRelacion']);
+
+// Actualizar relación existente (requiere menuId y productoId originales)
+Route::get('productos_menus/actualizar/{menuId}/{productoId}', [ProductosMenusController::class, 'actualizarRelacion']);
+
+// Eliminar relación (requiere menuId y productoId)
+Route::get('productos_menus/eliminar/{menuId}/{productoId}', [ProductosMenusController::class, 'eliminarRelacion']);
+
+
+
+// Listar todos los pedidos
+Route::get('pedidos', [PedidosController::class, 'pedidos']);
+
+// Insertar un nuevo pedido
+Route::get('pedidos/insertar', [PedidosController::class, 'insertarPedido']);
+
+// Actualizar un pedido existente (requiere ID)
+Route::get('pedidos/actualizar/{id}', [PedidosController::class, 'actualizarPedido']);
+
+// Eliminar un pedido (requiere ID)
+Route::get('pedidos/eliminar/{id}', [PedidosController::class, 'eliminarPedido']);
+
+
+
+
+// Listar todas las relaciones pedido‐producto
+Route::get('pedido_productos', [PedidoProductosController::class, 'relaciones']);
+
+// Insertar nueva relación (ejemplo con valores estáticos)
+Route::get('pedido_productos/insertar', [PedidoProductosController::class, 'insertarRelacion']);
+
+// Actualizar relación existente (requiere pedidoId y productoId originales)
+Route::get('pedido_productos/actualizar/{pedidoId}/{productoId}', [PedidoProductosController::class, 'actualizarRelacion']);
+
+// Eliminar relación (requiere pedidoId y productoId)
+Route::get('pedido_productos/eliminar/{pedidoId}/{productoId}', [PedidoProductosController::class, 'eliminarRelacion']);
+
+
+
+
+// Listar todos los puestos del organigrama
+Route::get('organigrama', [OrganigramaController::class, 'organigramas']);
+
+// Insertar un nuevo puesto en el organigrama
+Route::get('organigrama/insertar', [OrganigramaController::class, 'insertarOrganigrama']);
+
+// Actualizar un puesto existente (requiere ID)
+Route::get('organigrama/actualizar/{id}', [OrganigramaController::class, 'actualizarOrganigrama']);
+
+// Eliminar un puesto (requiere ID)
+Route::get('organigrama/eliminar/{id}', [OrganigramaController::class, 'eliminarOrganigrama']);
+
+
+Route::get('organigrama/ver', [OrganigramaController::class, 'verOrganigrama']);
