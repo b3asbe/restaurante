@@ -7,9 +7,7 @@ use Illuminate\Http\Request;
 
 class OrganigramaController extends Controller
 {
-    /**
-     * Listar todos los puestos en el organigrama.
-     */
+
     public function organigramas()
     {
         try {
@@ -45,84 +43,88 @@ class OrganigramaController extends Controller
             ], 300);
         }
     }
-
-    /**
-     * Insertar un nuevo puesto en el organigrama.
-     * (Ejemplo con valores estáticos: nombre="Nuevo Puesto", parent_id=null)
-     */
-    public function insertarOrganigrama()
-    {
-        try {
-            $puesto = new Organigrama();
-            $puesto->nombre    = 'Nuevo Puesto';   // Ejemplo de nombre
-            $puesto->parent_id = 20;             // Ejemplo: sin padre (nivel raíz)
-            $puesto->save();
-
-            return response()->json([
-                'status'  => 200,
-                'message' => 'Puesto agregado al organigrama correctamente',
-                'data'    => [
-                    'Id'       => $puesto->id,
-                    'Nombre'   => $puesto->nombre,
-                    'ParentId' => $puesto->parent_id,
-                ]
-            ], 200);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status'  => 300,
-                'message' => 'Error al crear el puesto en el organigrama',
-                'data'    => null
-            ], 300);
-        }
+public function insertarOrganigrama($id, $nombre)
+{
+   
+    $nombre = trim($nombre);
+    if (strlen($nombre) < 4) {
+        return response()->json([
+            'status'  => 422,
+            'message' => 'El nombre debe tener al menos 4 caracteres (sin contar espacios en los extremos).',
+            'data'    => null
+        ], 422);
     }
 
-    /**
-     * Actualizar un puesto existente en el organigrama.
-     * Por ejemplo, cambiar nombre y/o parent_id.
-     *
-     * @param int $id
-     */
-    public function actualizarOrganigrama($id)
-    {
-        try {
-            $puesto = Organigrama::find($id);
+    try {
+        $puesto = new Organigrama();
+        $puesto->nombre    = $nombre;
+        $puesto->parent_id = $id;
+        $puesto->save();
 
-            if (is_null($puesto)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el puesto con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
+        return response()->json([
+            'status'  => 200,
+            'message' => 'Puesto agregado al organigrama correctamente',
+            'data'    => [
+                'Id'       => $puesto->id,
+                'Nombre'   => $puesto->nombre,
+                'ParentId' => $puesto->parent_id,
+            ]
+        ], 200);
+    } catch (\Throwable $th) {
+        return response()->json([
+            'status'  => 300,
+            'message' => 'Error al crear el puesto en el organigrama',
+            'data'    => null
+        ], 300);
+    }
+}
 
-            // Ejemplo de nuevos valores:
-            $puesto->nombre    = 'Nuevo Puesto';
-            $puesto->parent_id = 2; // Ejemplo: asignar al padre con ID 1
-            $puesto->save();
-
-            return response()->json([
-                'status'  => 200,
-                'message' => 'Puesto actualizado correctamente',
-                'data'    => [
-                    'Id'       => $puesto->id,
-                    'Nombre'   => $puesto->nombre,
-                    'ParentId' => $puesto->parent_id,
-                ]
-            ], 200);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status'  => 300,
-                'message' => 'Error al actualizar el puesto en el organigrama',
-                'data'    => null
-            ], 300);
-        }
+public function actualizarOrganigrama($id, $padre, $nombre)
+{
+    // 1) Evitar sólo espacios y forzar mínimo 4 caracteres
+    $nombre = trim($nombre);
+    if (strlen($nombre) < 4) {
+        return response()->json([
+            'status'  => 422,
+            'message' => 'El nombre debe tener al menos 4 caracteres (sin contar espacios en los extremos).',
+            'data'    => null
+        ], 422);
     }
 
-    /**
-     * Eliminar un puesto del organigrama por su ID.
-     *
-     * @param int $id
-     */
+    try {
+        $puesto = Organigrama::find($id);
+        if (!$puesto) {
+            return response()->json([
+                'status'  => 404,
+                'message' => "No se encontró el puesto con ID {$id}",
+                'data'    => null
+            ], 404);
+        }
+
+        $puesto->nombre    = $nombre;
+        $puesto->parent_id = $padre;
+        $puesto->save();
+
+        return response()->json([
+            'status'  => 200,
+            'message' => 'Puesto actualizado correctamente',
+            'data'    => [
+                'Id'       => $puesto->id,
+                'Nombre'   => $puesto->nombre,
+                'ParentId' => $puesto->parent_id,
+            ]
+        ], 200);
+    } catch (\Throwable $th) {
+        return response()->json([
+            'status'  => 300,
+            'message' => 'Error al actualizar el puesto en el organigrama',
+            'data'    => null
+        ], 300);
+    }
+}
+
+
+
     public function eliminarOrganigrama($id)
     {
         try {

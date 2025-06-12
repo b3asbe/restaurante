@@ -50,7 +50,7 @@ class UsuarioController extends Controller
         try {
             $usuario = new Usuario();
             $usuario->nombre      = 'Andre Santos';
-            $usuario->correo      = 'andre@gmail.com';
+            $usuario->correo      = 'andrez@gmail.com';
             $usuario->contraseña  = bcrypt('123456');
             $usuario->rol_id      = 1;
             $usuario->save();

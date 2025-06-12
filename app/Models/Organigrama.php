@@ -18,4 +18,5 @@ class Organigrama extends Model
     ];
 
     public $timestamps = false;
+    
 }

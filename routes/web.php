@@ -15,6 +15,7 @@ use App\Http\Controllers\ProductosMenusController;
 use App\Http\Controllers\PedidosController;
 use App\Http\Controllers\PedidoProductosController;
 use App\Http\Controllers\OrganigramaController;
+use App\Http\Controllers\RolesController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -30,12 +31,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-//Productos CRUD
+//1: Productos CRUD
 
 //Listar
 Route::get('productos',[ProductoController::class,'productos']);
 //Insertar
-Route::get('productos/insertar', [ProductoController::class, 'insertarProducto']);
+Route::post('productos/insertar', [ProductoController::class, 'insertarProducto']);
 //Actualizar
 Route::get('productos/actualizar/{id}', [ProductoController::class, 'actualizarProducto']);
 //Eliminar
@@ -171,8 +172,6 @@ Route::get('productos_menus/insertar', [ProductosMenusController::class, 'insert
 // Actualizar relación existente (requiere menuId y productoId originales)
 Route::get('productos_menus/actualizar/{menuId}/{productoId}', [ProductosMenusController::class, 'actualizarRelacion']);
 
-// Eliminar relación (requiere menuId y productoId)
-Route::get('productos_menus/eliminar/{menuId}/{productoId}', [ProductosMenusController::class, 'eliminarRelacion']);
 
 
 
@@ -210,13 +209,21 @@ Route::get('pedido_productos/eliminar/{pedidoId}/{productoId}', [PedidoProductos
 Route::get('organigrama', [OrganigramaController::class, 'organigramas']);
 
 // Insertar un nuevo puesto en el organigrama
-Route::get('organigrama/insertar', [OrganigramaController::class, 'insertarOrganigrama']);
+Route::get('organigrama/insertar/{id}/{nombre}', [OrganigramaController::class, 'insertarOrganigrama']);
 
 // Actualizar un puesto existente (requiere ID)
-Route::get('organigrama/actualizar/{id}', [OrganigramaController::class, 'actualizarOrganigrama']);
+Route::get('organigrama/actualizar/{id}/{padre}/{nombre}', [OrganigramaController::class, 'actualizarOrganigrama']);
 
 // Eliminar un puesto (requiere ID)
 Route::get('organigrama/eliminar/{id}', [OrganigramaController::class, 'eliminarOrganigrama']);
 
 
 Route::get('organigrama/ver', [OrganigramaController::class, 'verOrganigrama']);
+
+
+
+// Roles CRUD
+Route::get('roles', [RolesController::class, 'roles']);
+Route::get('roles/insertar', [RolesController::class, 'insertarRole']);
+Route::get('roles/actualizar/{id}', [RolesController::class, 'actualizarRole']);
+Route::get('roles/eliminar/{id}', [RolesController::class, 'eliminarRole']);

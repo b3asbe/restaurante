@@ -9,53 +9,65 @@ use Illuminate\Support\Facades\DB;
 class ProductosMenusController extends Controller
 {
     /**
-     * Listar todas las relaciones menú‐producto.
+     * Listar todas las relaciones menú‐producto con datos completos.
      */
     public function relaciones()
-    {
-        try {
-            $relaciones = ProductosMenus::all();
+{
+    try {
+        // Trae todas las relaciones con menú y producto
+        $relaciones = ProductosMenus::with(['menu', 'producto'])->get();
 
-            if ($relaciones->isEmpty()) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => 'No hay relaciones menú‐producto registradas',
-                    'data'    => null
-                ], 200);
-            }
-
-            $data = [];
-            foreach ($relaciones as $item) {
-                $data[] = [
-                    'MenuId'     => $item->menu_id,
-                    'ProductoId' => $item->producto_id,
-                ];
-            }
-
+        if ($relaciones->isEmpty()) {
             return response()->json([
                 'status'  => 200,
-                'message' => 'Relaciones menú‐producto obtenidas correctamente',
-                'data'    => $data
-            ], 200);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status'  => 300,
-                'message' => 'Error al listar las relaciones menú‐producto',
+                'message' => 'No hay relaciones menú‐producto registradas',
                 'data'    => null
-            ], 300);
+            ], 200);
         }
-    }
 
-    /**
-     * Insertar una nueva relación menú‐producto.
-     * (Ejemplo con valores estáticos: menu_id = 11, producto_id = 11)
-     */
+        // Agrupamos por menú
+        $agrupado = $relaciones->groupBy('menu_id');
+
+        // Formateamos la respuesta
+        $data = $agrupado->map(function($grupo, $menuId) {
+            return [
+                'MenuId'          => (int) $menuId,
+                'MenuNombre'      => $grupo->first()->menu->nombre,
+                'MenuDescripcion' => $grupo->first()->menu->descripcion,
+                'Productos'       => $grupo->map(function($item) {
+                    return [
+                        'ProductoId'          => $item->producto_id,
+                        'ProductoNombre'      => $item->producto->nombre,
+                        'ProductoDescripcion' => $item->producto->descripcion,
+                        'Precio'              => $item->producto->precio,
+                        'Stock'               => $item->producto->stock,
+                    ];
+                })->values(), // reindexa el array interno
+            ];
+        })->values(); // reindexa el array externo
+
+        return response()->json([
+            'status'  => 200,
+            'message' => 'Relaciones menú‐producto agrupadas correctamente',
+            'data'    => $data
+        ], 200);
+
+    } catch (\Throwable $th) {
+        return response()->json([
+            'status'  => 300,
+            'message' => 'Error al listar las relaciones menú‐producto',
+            'data'    => null
+        ], 300);
+    }
+}
+
+
     public function insertarRelacion()
     {
         try {
             $relacion = new ProductosMenus();
-            $relacion->menu_id     = 2; // Ejemplo: nuevo menú_id
-            $relacion->producto_id = 6; // Ejemplo: nuevo producto_id
+            $relacion->menu_id     = 1; 
+            $relacion->producto_id = 6; 
             $relacion->save();
 
             return response()->json([
@@ -75,13 +87,6 @@ class ProductosMenusController extends Controller
         }
     }
 
-    /**
-     * Actualizar una relación menú‐producto existente.
-     * Por ejemplo, cambiar producto_id a 99 para el par dado.
-     *
-     * @param int $menuId
-     * @param int $productoId
-     */
     public function actualizarRelacion($menuId, $productoId)
     {
         try {
@@ -97,26 +102,23 @@ class ProductosMenusController extends Controller
                 ], 200);
             }
 
-            // Ejemplo de actualización: asignar nuevos IDs (plan: menu_id = 1, producto_id = 50)
-            $nuevoMenuId     = 2;
-            $nuevoProductoId = 5;
-
+            // Ejemplo: aquí podrías cambiar menu_id/producto_id
             DB::table('productos_menus')
                 ->where('menu_id', $menuId)
                 ->where('producto_id', $productoId)
                 ->update([
-                    'menu_id'     => $nuevoMenuId,
-                    'producto_id' => $nuevoProductoId
+                    'menu_id'     => $menuId,
+                    'producto_id' => $productoId
                 ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Relación menú‐producto actualizada correctamente',
                 'data'    => [
-                    'MenuId'     => $menuId,
+                    'MenuIdOriginal'     => $menuId,
                     'ProductoIdOriginal' => $productoId,
-                    'MenuIdNuevo'        => $nuevoMenuId,
-                    'ProductoIdNuevo'    => $nuevoProductoId,
+                    'MenuIdNuevo'        => $menuId,
+                    'ProductoIdNuevo'    => $productoId,
                 ]
             ], 200);
         } catch (\Throwable $th) {
@@ -128,43 +130,4 @@ class ProductosMenusController extends Controller
         }
     }
 
-    /**
-     * Eliminar una relación menú‐producto por su par de claves.
-     *
-     * @param int $menuId
-     * @param int $productoId
-     */
-    public function eliminarRelacion($menuId, $productoId)
-    {
-        try {
-            $relacion = ProductosMenus::where('menu_id', $menuId)
-                                      ->where('producto_id', $productoId)
-                                      ->first();
-
-            if (is_null($relacion)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró la relación menú {$menuId} / producto {$productoId}",
-                    'data'    => null
-                ], 200);
-            }
-
-            DB::table('productos_menus')
-                ->where('menu_id', $menuId)
-                ->where('producto_id', $productoId)
-                ->delete();
-
-            return response()->json([
-                'status'  => 200,
-                'message' => 'Relación menú‐producto eliminada correctamente',
-                'data'    => null
-            ], 200);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status'  => 300,
-                'message' => 'Error al eliminar la relación menú‐producto',
-                'error'   => $th->getMessage(),
-            ], 300);
-        }
-    }
 }

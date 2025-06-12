@@ -82,7 +82,7 @@ class MesasController extends Controller
             }
 
             // Ejemplo de actualización (puedes cambiar los valores según tu lógica)
-            $mesa->numero    = 10;
+            $mesa->numero    = $id;
             $mesa->capacidad = 16;
             $mesa->save();
 

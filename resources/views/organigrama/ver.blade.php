@@ -50,7 +50,7 @@
     </script>
 
     <style>
-        /* Solo para que veas algo de estilo en el organigrama */
+
         .org-node {
             border: 1px solid #ccc;
             border-radius: 4px;
