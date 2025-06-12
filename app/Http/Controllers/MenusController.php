@@ -1,17 +1,19 @@
 <?php
+// app/Http/Controllers/MenusController.php
 
 namespace App\Http\Controllers;
+
 use App\Models\Menus;
 use Illuminate\Http\Request;
 
 class MenusController extends Controller
 {
-    public function menus()
+    // Listar todos los menús
+    public function menus(Request $request)
     {
         try {
-            $elementoDB = Menus::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = Menus::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay menús registrados',
@@ -19,96 +21,104 @@ class MenusController extends Controller
                 ], 200);
             }
 
-            $data = [];
-            foreach ($elementoDB as $item) {
-                $data[] = [
-                    'Id'          => $item->id,
-                    'Nombre'      => $item->nombre,
-                    'Descripcion' => $item->descripcion,
-                ];
-            }
+            $data = $todos->map(fn($m) => [
+                'id'          => $m->id,
+                'nombre'      => $m->nombre,
+                'descripcion' => $m->descripcion,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Menús obtenidos correctamente',
                 'data'    => $data
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al listar los menús',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    public function insertarMenu()
+    // Insertar un nuevo menú
+    public function insertarMenu(Request $request)
     {
         try {
-            $menu = new Menus();
-            $menu->nombre      = 'Menú del Día';
-            $menu->descripcion = 'Plato principal + bebida + postre';
-            $menu->save();
+            $datos = $request->validate([
+                'nombre'      => 'required|string|unique:menus,nombre',
+                'descripcion' => 'required|string',
+            ]);
+
+            $menu = Menus::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Menú creado correctamente',
                 'data'    => $menu
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el menú',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    public function actualizarMenu($id)
+    // Actualizar un menú existente
+    public function actualizarMenu(Request $request)
     {
         try {
-            $menu = Menus::find($id);
+            $datos = $request->validate([
+                'id'          => 'required|integer|exists:menus,id',
+                'nombre'      => 'sometimes|required|string|unique:menus,nombre,'.$request->id,
+                'descripcion' => 'sometimes|required|string',
+            ]);
 
-            if (is_null($menu)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el menú con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
-            $menu->nombre      = 'Menú Vegano';
-            $menu->descripcion = 'Ensalada + bebida natural';
-            $menu->save();
+            $menu = Menus::find($datos['id']);
+            $menu->update($request->only(['nombre','descripcion']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Menú actualizado correctamente',
                 'data'    => $menu
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el menú',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-
-    public function eliminarMenu($id)
+    // Eliminar un menú
+    public function eliminarMenu(Request $request)
     {
         try {
-            $menu = Menus::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:menus,id',
+            ]);
 
-            if (is_null($menu)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el menú con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
+            $menu = Menus::find($datos['id']);
             $menu->delete();
 
             return response()->json([
@@ -116,11 +126,19 @@ class MenusController extends Controller
                 'message' => 'Menú eliminado correctamente',
                 'data'    => null
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar el menú',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

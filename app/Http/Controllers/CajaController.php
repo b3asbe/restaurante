@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/CajaController.php
 
 namespace App\Http\Controllers;
 
@@ -10,12 +11,12 @@ class CajaController extends Controller
     /**
      * Listar todos los cierres de caja.
      */
-    public function cierresCaja()
+    public function cierresCaja(Request $request)
     {
         try {
-            $elementoDB = Caja::all();
+            $todos = Caja::all();
 
-            if ($elementoDB->isEmpty()) {
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay cierres de caja registrados',
@@ -23,26 +24,24 @@ class CajaController extends Controller
                 ], 200);
             }
 
-            $data = [];
-            foreach ($elementoDB as $item) {
-                $data[] = [
-                    'Id'         => $item->id,
-                    'Fecha'      => $item->fecha,
-                    'Total'      => $item->total,
-                    'UsuarioId'  => $item->usuario_id,
-                ];
-            }
+            $data = $todos->map(fn($c) => [
+                'id'         => $c->id,
+                'fecha'      => $c->fecha,
+                'total'      => $c->total,
+                'usuario_id' => $c->usuario_id,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Cierres de caja obtenidos correctamente',
                 'data'    => $data
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al listar los cierres de caja',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
@@ -50,21 +49,17 @@ class CajaController extends Controller
     /**
      * Listar los cierres de caja que coincidan con una fecha dada (YYYY-MM-DD).
      */
-    public function cierresPorFecha($fecha)
+    public function cierresPorFecha(Request $request)
     {
         try {
-            // Validar formato de fecha simples
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-                return response()->json([
-                    'status'  => 422,
-                    'message' => 'Formato de fecha inválido. Use YYYY-MM-DD',
-                    'data'    => null
-                ], 422);
-            }
+            $datos = $request->validate([
+                'fecha' => 'required|date_format:Y-m-d',
+            ]);
 
-            $elementoDB = Caja::where('fecha', $fecha)->get();
+            $fecha = $datos['fecha'];
+            $filtros = Caja::where('fecha', $fecha)->get();
 
-            if ($elementoDB->isEmpty()) {
+            if ($filtros->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => "No hay cierres de caja para la fecha {$fecha}",
@@ -72,26 +67,31 @@ class CajaController extends Controller
                 ], 200);
             }
 
-            $data = [];
-            foreach ($elementoDB as $item) {
-                $data[] = [
-                    'Id'         => $item->id,
-                    'Fecha'      => $item->fecha,
-                    'Total'      => $item->total,
-                    'UsuarioId'  => $item->usuario_id,
-                ];
-            }
+            $data = $filtros->map(fn($c) => [
+                'id'         => $c->id,
+                'fecha'      => $c->fecha,
+                'total'      => $c->total,
+                'usuario_id' => $c->usuario_id,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => "Cierres de caja para la fecha {$fecha} obtenidos correctamente",
                 'data'    => $data
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Formato de fecha inválido. Use YYYY-MM-DD',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al listar cierres de caja por fecha',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

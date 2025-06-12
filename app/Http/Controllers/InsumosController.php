@@ -1,17 +1,19 @@
 <?php
+// app/Http/Controllers/InsumosController.php
 
 namespace App\Http\Controllers;
+
 use App\Models\Insumos;
 use Illuminate\Http\Request;
 
 class InsumosController extends Controller
 {
-    public function insumos()
+    // Listar todos los insumos
+    public function insumos(Request $request)
     {
         try {
-            $elementoDB = Insumos::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = Insumos::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay insumos registrados',
@@ -19,100 +21,107 @@ class InsumosController extends Controller
                 ], 200);
             }
 
-            $data = [];
-            foreach ($elementoDB as $item) {
-                $data[] = [
-                    'Id'       => $item->id,
-                    'Nombre'   => $item->nombre,
-                    'Cantidad' => $item->cantidad,
-                    'Unidad'   => $item->unidad,
-                ];
-            }
+            $data = $todos->map(fn($i) => [
+                'id'       => $i->id,
+                'nombre'   => $i->nombre,
+                'cantidad' => $i->cantidad,
+                'unidad'   => $i->unidad,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Información de insumos obtenida correctamente',
                 'data'    => $data
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Ocurrió un problema al listar insumos',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-
-    public function insertarInsumo()
+    // Insertar un nuevo insumo
+    public function insertarInsumo(Request $request)
     {
         try {
-            $insumo = new Insumos();
-            $insumo->nombre   = 'papa';
-            $insumo->cantidad = 20;
-            $insumo->unidad   = 'kg';
-            $insumo->save();
+            $datos = $request->validate([
+                'nombre'   => 'required|string',
+                'cantidad' => 'required|numeric|min:0',
+                'unidad'   => 'required|string',
+            ]);
+
+            $insumo = Insumos::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Insumo creado correctamente',
                 'data'    => $insumo
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el insumo',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-
-    public function actualizarInsumo($id)
+    // Actualizar un insumo existente
+    public function actualizarInsumo(Request $request)
     {
         try {
-            $insumo = Insumos::find($id);
+            $datos = $request->validate([
+                'id'       => 'required|integer|exists:insumos,id',
+                'nombre'   => 'sometimes|required|string',
+                'cantidad' => 'sometimes|required|numeric|min:0',
+                'unidad'   => 'sometimes|required|string',
+            ]);
 
-            if (is_null($insumo)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el insumo con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
-            $insumo->nombre   = 'Papa';
-            $insumo->cantidad = 50;
-            $insumo->unidad   = 'kg';
-            $insumo->save();
+            $insumo = Insumos::find($datos['id']);
+            $insumo->update($request->only(['nombre','cantidad','unidad']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Insumo actualizado correctamente',
                 'data'    => $insumo
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el insumo',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    public function eliminarInsumo($id)
+    // Eliminar un insumo
+    public function eliminarInsumo(Request $request)
     {
         try {
-            $insumo = Insumos::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:insumos,id',
+            ]);
 
-            if (is_null($insumo)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el insumo con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
+            $insumo = Insumos::find($datos['id']);
             $insumo->delete();
 
             return response()->json([
@@ -120,11 +129,19 @@ class InsumosController extends Controller
                 'message' => 'Insumo eliminado correctamente',
                 'data'    => null
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar el insumo',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

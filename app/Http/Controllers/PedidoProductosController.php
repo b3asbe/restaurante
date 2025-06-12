@@ -1,22 +1,19 @@
 <?php
+// app/Http/Controllers/PedidoProductosController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\PedidoProductos;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PedidoProductosController extends Controller
 {
-    /**
-     * Listar todos los productos en cada pedido.
-     */
-    public function relaciones()
+    // Listar todos los registros pedido‐producto
+    public function relaciones(Request $request)
     {
         try {
-            $relaciones = PedidoProductos::all();
-
-            if ($relaciones->isEmpty()) {
+            $todos = PedidoProductos::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay registros de pedido‐productos',
@@ -24,152 +21,161 @@ class PedidoProductosController extends Controller
                 ], 200);
             }
 
-            $data = [];
-            foreach ($relaciones as $item) {
-                $data[] = [
-                    'PedidoId'      => $item->pedido_id,
-                    'ProductoId'    => $item->producto_id,
-                    'Cantidad'      => $item->cantidad,
-                    'PrecioUnitario'=> $item->precio_unitario,
-                ];
-            }
+            $data = $todos->map(fn($r) => [
+                'pedido_id'       => $r->pedido_id,
+                'producto_id'     => $r->producto_id,
+                'cantidad'        => $r->cantidad,
+                'precio_unitario' => $r->precio_unitario,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Relaciones pedido‐productos obtenidas correctamente',
                 'data'    => $data
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al listar pedido‐productos',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Insertar una nueva relación pedido‐producto.
-     * (Ejemplo con valores estáticos: pedido_id=11, producto_id=11, cantidad=1, precio_unitario=100.00)
-     */
-    public function insertarRelacion()
+    // Insertar una nueva relación pedido‐producto
+    public function insertarRelacion(Request $request)
     {
         try {
-            $relacion = new PedidoProductos();
-            $relacion->pedido_id       = 10;    // Ejemplo: ID de pedido
-            $relacion->producto_id     = 4;    // Ejemplo: ID de producto
-            $relacion->cantidad        = 1;     // Ejemplo: cantidad
-            $relacion->precio_unitario = 100.00; // Ejemplo: precio unitario
-            $relacion->save();
+            $datos = $request->validate([
+                'pedido_id'       => 'required|integer|exists:pedidos,id',
+                'producto_id'     => 'required|integer|exists:productos,id',
+                'cantidad'        => 'required|integer|min:1',
+                'precio_unitario' => 'required|numeric|min:0',
+            ]);
+
+            $rel = PedidoProductos::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Relación pedido‐producto creada correctamente',
                 'data'    => [
-                    'PedidoId'      => $relacion->pedido_id,
-                    'ProductoId'    => $relacion->producto_id,
-                    'Cantidad'      => $relacion->cantidad,
-                    'PrecioUnitario'=> $relacion->precio_unitario,
+                    'pedido_id'       => $rel->pedido_id,
+                    'producto_id'     => $rel->producto_id,
+                    'cantidad'        => $rel->cantidad,
+                    'precio_unitario' => $rel->precio_unitario,
                 ]
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear la relación pedido‐producto',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Actualizar una relación pedido‐producto existente.
-     * Por ejemplo, cambiar cantidad y precio_unitario para el par dado.
-     *
-     * @param int $pedidoId
-     * @param int $productoId
-     */
-    public function actualizarRelacion($pedidoId, $productoId)
+    // Actualizar una relación pedido‐producto existente
+    public function actualizarRelacion(Request $request)
     {
         try {
-            $existe = PedidoProductos::where('pedido_id', $pedidoId)
-                                     ->where('producto_id', $productoId)
-                                     ->first();
+            $datos = $request->validate([
+                'pedido_id'       => 'required|integer|exists:pedidos,id',
+                'producto_id'     => 'required|integer|exists:productos,id',
+                'cantidad'        => 'sometimes|required|integer|min:1',
+                'precio_unitario' => 'sometimes|required|numeric|min:0',
+            ]);
 
-            if (is_null($existe)) {
+            $rel = PedidoProductos::where('pedido_id', $datos['pedido_id'])
+                                  ->where('producto_id', $datos['producto_id'])
+                                  ->first();
+
+            if (!$rel) {
                 return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró relación para pedido {$pedidoId} / producto {$productoId}",
+                    'status'  => 404,
+                    'message' => "No se encontró relación para pedido {$datos['pedido_id']} / producto {$datos['producto_id']}",
                     'data'    => null
-                ], 200);
+                ], 404);
             }
 
-            // Ejemplo de nuevos valores: cantidad=5, precio_unitario=50.00
-            $nuevaCantidad        = 5;
-            $nuevoPrecioUnitario  = 50.00;
-
-            DB::table('pedido_productos')
-                ->where('pedido_id', $pedidoId)
-                ->where('producto_id', $productoId)
-                ->update([
-                    'cantidad'        => $nuevaCantidad,
-                    'precio_unitario' => $nuevoPrecioUnitario,
-                ]);
+            $rel->update($request->only(['cantidad','precio_unitario']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Relación pedido‐producto actualizada correctamente',
                 'data'    => [
-                    'PedidoIdOriginal'       => $pedidoId,
-                    'ProductoIdOriginal'     => $productoId,
-                    'CantidadNuevo'          => $nuevaCantidad,
-                    'PrecioUnitarioNuevo'    => $nuevoPrecioUnitario,
+                    'pedido_id'       => $rel->pedido_id,
+                    'producto_id'     => $rel->producto_id,
+                    'cantidad'        => $rel->cantidad,
+                    'precio_unitario' => $rel->precio_unitario,
                 ]
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar la relación pedido‐producto',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Eliminar una relación pedido‐producto por su par de claves.
-     *
-     * @param int $pedidoId
-     * @param int $productoId
-     */
-    public function eliminarRelacion($pedidoId, $productoId)
+    // Eliminar una relación pedido‐producto
+    public function eliminarRelacion(Request $request)
     {
         try {
-            $relacion = PedidoProductos::where('pedido_id', $pedidoId)
-                                       ->where('producto_id', $productoId)
-                                       ->first();
+            $datos = $request->validate([
+                'pedido_id'   => 'required|integer|exists:pedidos,id',
+                'producto_id' => 'required|integer|exists:productos,id',
+            ]);
 
-            if (is_null($relacion)) {
+            $rel = PedidoProductos::where('pedido_id', $datos['pedido_id'])
+                                  ->where('producto_id', $datos['producto_id'])
+                                  ->first();
+
+            if (!$rel) {
                 return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró relación para pedido {$pedidoId} / producto {$productoId}",
+                    'status'  => 404,
+                    'message' => "No se encontró relación para pedido {$datos['pedido_id']} / producto {$datos['producto_id']}",
                     'data'    => null
-                ], 200);
+                ], 404);
             }
 
-            DB::table('pedido_productos')
-                ->where('pedido_id', $pedidoId)
-                ->where('producto_id', $productoId)
-                ->delete();
+            $rel->delete();
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Relación pedido‐producto eliminada correctamente',
                 'data'    => null
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar la relación pedido‐producto',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

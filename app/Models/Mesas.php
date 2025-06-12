@@ -1,4 +1,5 @@
 <?php
+// app/Models/Mesas.php
 
 namespace App\Models;
 
@@ -12,11 +13,9 @@ class Mesas extends Model
     protected $table = 'mesas';
 
     protected $fillable = [
-        'id',
         'numero',
         'capacidad',
     ];
 
     public $timestamps = false;
 }
-

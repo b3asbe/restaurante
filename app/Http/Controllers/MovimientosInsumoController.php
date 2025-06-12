@@ -1,21 +1,19 @@
 <?php
+// app/Http/Controllers/MovimientosInsumoController.php
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\MovimientosInsumo;
+use Illuminate\Http\Request;
 
 class MovimientosInsumoController extends Controller
 {
-    /**
-     * Listar todos los movimientos de insumo
-     */
-    public function movimientos()
+    // Listar todos los movimientos de insumo
+    public function movimientos(Request $request)
     {
         try {
-            $elementoDB = MovimientosInsumo::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = MovimientosInsumo::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay movimientos de insumo registrados',
@@ -23,115 +21,110 @@ class MovimientosInsumoController extends Controller
                 ], 200);
             }
 
-            // Preparar salida
-            $dataMovimientos = [];
-            foreach ($elementoDB as $mov) {
-                $dataMovimientos[] = [
-                    'ID'        => $mov->id,
-                    'InsumoID'  => $mov->insumo_id,
-                    'Cantidad'  => $mov->cantidad,
-                    'Tipo'      => $mov->tipo,
-                    'Fecha'     => $mov->fecha,
-                ];
-            }
+            $data = $todos->map(fn($m) => [
+                'id'        => $m->id,
+                'insumo_id' => $m->insumo_id,
+                'cantidad'  => $m->cantidad,
+                'tipo'      => $m->tipo,
+                'fecha'     => $m->fecha,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Movimientos obtenidos correctamente',
-                'data'    => $dataMovimientos
+                'data'    => $data
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Ocurrió un problema al listar los movimientos',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Insertar un nuevo movimiento de insumo (ejemplo hardcodeado)
-     */
-    public function insertarMovimiento()
+    // Insertar un nuevo movimiento de insumo
+    public function insertarMovimiento(Request $request)
     {
         try {
-            $nuevo = new MovimientosInsumo();
-            $nuevo->insumo_id = 1;                          // Ejemplo: insumo con ID 1
-            $nuevo->cantidad  = 100;                        // Ejemplo de cantidad
-            $nuevo->tipo      = 'ENTRADA';                   // Puede ser 'ENTRADA' o 'SALIDA'
-            $nuevo->fecha     = '2025-05-20 09:30:00';       // Ejemplo de fecha/hora
-            $nuevo->save();
+            $datos = $request->validate([
+                'insumo_id' => 'required|integer|exists:insumos,id',
+                'cantidad'  => 'required|numeric|min:0',
+                'tipo'      => 'required|string|in:ENTRADA,SALIDA',
+                'fecha'     => 'required|date_format:Y-m-d H:i:s',
+            ]);
+
+            $mov = MovimientosInsumo::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Movimiento de insumo creado correctamente',
-                'data'    => $nuevo
+                'data'    => $mov
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el movimiento de insumo',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Actualizar un movimiento de insumo por su ID
-     */
-    public function actualizarMovimiento($id)
+    // Actualizar un movimiento de insumo existente
+    public function actualizarMovimiento(Request $request)
     {
         try {
-            $mov = MovimientosInsumo::find($id);
+            $datos = $request->validate([
+                'id'        => 'required|integer|exists:movimientos_insumo,id',
+                'insumo_id' => 'sometimes|required|integer|exists:insumos,id',
+                'cantidad'  => 'sometimes|required|numeric|min:0',
+                'tipo'      => 'sometimes|required|string|in:ENTRADA,SALIDA',
+                'fecha'     => 'sometimes|required|date_format:Y-m-d H:i:s',
+            ]);
 
-            if (is_null($mov)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => 'No se encontró el movimiento con ID ' . $id,
-                    'data'    => null
-                ], 200);
-            }
-
-            // Ejemplo de nuevos valores (puedes reemplazar por $request->input('campo'))
-            $mov->insumo_id = 2;                          // Cambiamos a insumo con ID 2
-            $mov->cantidad  = 50;                         // Nueva cantidad
-            $mov->tipo      = 'SALIDA';                   // Ejemplo cambio a SALIDA
-            $mov->fecha     = '2025-05-21 14:45:00';       // Nueva fecha/hora
-            $mov->save();
+            $mov = MovimientosInsumo::find($datos['id']);
+            $mov->update($request->only(['insumo_id','cantidad','tipo','fecha']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Movimiento de insumo actualizado correctamente',
                 'data'    => $mov
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el movimiento',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Eliminar un movimiento de insumo por su ID
-     */
-    public function eliminarMovimiento($id)
+    // Eliminar un movimiento de insumo
+    public function eliminarMovimiento(Request $request)
     {
         try {
-            $mov = MovimientosInsumo::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:movimientos_insumo,id',
+            ]);
 
-            if (is_null($mov)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el movimiento con ID $id",
-                    'data'    => null
-                ], 200);
-            }
-
+            $mov = MovimientosInsumo::find($datos['id']);
             $mov->delete();
 
             return response()->json([
@@ -139,12 +132,19 @@ class MovimientosInsumoController extends Controller
                 'message' => 'Movimiento de insumo eliminado correctamente',
                 'data'    => null
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar el movimiento',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

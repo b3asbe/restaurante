@@ -1,22 +1,19 @@
 <?php
+// app/Http/Controllers/EstadoPedidosController.php
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\EstadoPedidos;
+use Illuminate\Http\Request;
 
 class EstadoPedidosController extends Controller
 {
-    /**
-     * Listar todos los estados de pedido
-     */
-    public function pedidos()
+    // Listar todos los estados de pedido
+    public function pedidos(Request $request)
     {
         try {
-            // Aquí referenciamos al modelo correcto: EstadoPedidos, no Pedidos
-            $elementoDB = EstadoPedidos::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = EstadoPedidos::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay estados de pedido registrados',
@@ -24,75 +21,69 @@ class EstadoPedidosController extends Controller
                 ], 200);
             }
 
-            // Preparar salida
-            $dataEstados = [];
-            foreach ($elementoDB as $estado) {
-                $dataEstados[] = [
-                    'ID'     => $estado->id,
-                    'Nombre' => $estado->nombre,
-                ];
-            }
+            $data = $todos->map(fn($e) => [
+                'id'     => $e->id,
+                'nombre' => $e->nombre,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Estados de pedido obtenidos correctamente',
-                'data'    => $dataEstados
+                'data'    => $data
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Ocurrió un problema al listar los estados',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Insertar un nuevo estado de pedido (ejemplo hardcodeado)
-     */
-    public function insertarPedido()
+    // Insertar un nuevo estado de pedido
+    public function insertarPedido(Request $request)
     {
         try {
-            // Usamos EstadoPedidos en lugar de Pedidos
-            $nuevo = new EstadoPedidos();
-            $nuevo->nombre = 'En proceso';  // Ejemplo de nombre
-            $nuevo->save();
+            $datos = $request->validate([
+                'nombre' => 'required|string|unique:estados_pedido,nombre',
+            ]);
+
+            $nuevo = EstadoPedidos::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Estado de pedido creado correctamente',
                 'data'    => $nuevo
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el estado de pedido',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Actualizar un estado de pedido por su ID
-     */
-    public function actualizarPedido($id)
+    // Actualizar un estado de pedido existente
+    public function actualizarPedido(Request $request)
     {
         try {
-            // Buscamos con el modelo correcto
-            $estado = EstadoPedidos::find($id);
+            $datos = $request->validate([
+                'id'     => 'required|integer|exists:estados_pedido,id',
+                'nombre' => 'required|string|unique:estados_pedido,nombre,'.$request->id,
+            ]);
 
-            if (is_null($estado)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => 'No se encontró el estado con ID ' . $id,
-                    'data'    => null
-                ], 200);
-            }
-
-            // Ejemplo de nuevo nombre (puedes reemplazarlo por $request->input('nombre'))
-            $estado->nombre = 'Completado';
+            $estado = EstadoPedidos::find($datos['id']);
+            $estado->nombre = $datos['nombre'];
             $estado->save();
 
             return response()->json([
@@ -100,32 +91,32 @@ class EstadoPedidosController extends Controller
                 'message' => 'Estado de pedido actualizado correctamente',
                 'data'    => $estado
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el estado',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Eliminar un estado de pedido por su ID
-     */
-    public function eliminarPedido($id)
+    // Eliminar un estado de pedido
+    public function eliminarPedido(Request $request)
     {
         try {
-            $estado = EstadoPedidos::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:estados_pedido,id',
+            ]);
 
-            if (is_null($estado)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el estado con ID $id",
-                    'data'    => null
-                ], 200);
-            }
-
+            $estado = EstadoPedidos::find($datos['id']);
             $estado->delete();
 
             return response()->json([
@@ -133,12 +124,19 @@ class EstadoPedidosController extends Controller
                 'message' => 'Estado de pedido eliminado correctamente',
                 'data'    => null
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar el estado',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

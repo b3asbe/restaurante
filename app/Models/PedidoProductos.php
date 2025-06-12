@@ -1,4 +1,5 @@
 <?php
+// app/Models/PedidoProductos.php
 
 namespace App\Models;
 
@@ -9,11 +10,9 @@ class PedidoProductos extends Model
 {
     use HasFactory;
 
-    protected $table = 'pedido_productos';
-
-    // Desactivar primaryKey e incrementing para clave compuesta
-    protected $primaryKey = null;
+    protected $table      = 'pedido_productos';
     public $incrementing  = false;
+    protected $primaryKey = null;
 
     protected $fillable = [
         'pedido_id',

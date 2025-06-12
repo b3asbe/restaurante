@@ -1,154 +1,153 @@
 <?php
+// app/Http/Controllers/ProductoController.php
 
 namespace App\Http\Controllers;
+
 use App\Models\Productos;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; 
 
 class ProductoController extends Controller
 {
-    public function productos()
+    // Listar productos
+    public function productos(Request $request)
     {
-
         try {
-        
-       $elementoDB = Productos::all();
-   
-        if (empty($elementoDB)) {
+            $elementos = Productos::all();
+
+            if ($elementos->isEmpty()) {
+                return response()->json([
+                    'status'  => 200,
+                    'message' => 'No hay datos',
+                    'data'    => null
+                ], 200);
+            }
+
+            $data = $elementos->map(fn($p) => [
+                'id'          => $p->id,
+                'nombre'      => $p->nombre,
+                'descripcion' => $p->descripcion,
+                'precio'      => $p->precio,
+                'stock'       => $p->stock,
+            ]);
+
             return response()->json([
                 'status'  => 200,
-                'message' => 'No hay datos',
-                'data'    => null
+                'message' => 'Información obtenida correctamente',
+                'data'    => $data
             ], 200);
-        }
 
-        $dataProductos = [];
-        foreach ($elementoDB as $datos) {
-            $dataProductos[] = [
-                'Nombre'      => $datos->nombre,
-                'Descripcion' => $datos->descripcion,
-                'Precio'      => $datos->precio,
-                'Stock'       => $datos->stock,
-            ];
-        }
-
-        return response()->json([
-            'status'  => 200,
-            'message' => 'Información obtenida correctamente',
-            'data'    => $dataProductos
-        ], 200);
-        }
-        
-        catch(\Throwable $th)
-        {
-            $mensaje = "Ocurrio un problema";
+        } catch (\Throwable $th) {
             return response()->json([
-            'status' => 300,
-            'message' => $mensaje,
-            'data' => null
-            ],status:300);
+                'status'  => 300,
+                'message' => 'Error al listar productos',
+                'error'   => $th->getMessage()
+            ], 300);
         }
     }
 
-
-   
-
-//Insertar
-public function insertarProducto()
+    // Insertar producto
+    public function insertarProducto(Request $request)
     {
         try {
-            $producto = new Productos();
-            $producto->nombre      = 'Arrroz con pollooooo';
-            $producto->descripcion = 'Arroz con pollito ';
-            $producto->precio      = 45.99;
-            $producto->stock       = 10;
+            $datos = $request->validate([
+                'nombre'      => 'required|string',
+                'descripcion' => 'nullable|string',
+                'precio'      => 'required|numeric',
+                'stock'       => 'required|integer',
+            ]);
 
-            $producto->save();
+            $producto = Productos::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Producto creado correctamente',
                 'data'    => $producto
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Error de validación
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el producto',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-//Actualizar
-     public function actualizarProducto($id)
+    // Actualizar producto
+    public function actualizarProducto(Request $request)
     {
         try {
-            $producto = Productos::find($id);
+            $datos = $request->validate([
+                'id'          => 'required|integer|exists:productos,id',
+                'nombre'      => 'sometimes|required|string',
+                'descripcion' => 'sometimes|nullable|string',
+                'precio'      => 'sometimes|required|numeric',
+                'stock'       => 'sometimes|required|integer',
+            ]);
 
-            if (is_null($producto)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => 'No se encontro el producto con ID '.$id,
-                    'data'    => null
-                ], 200);
-            }
-
-            // 2) Asignar nuevos valores
-            $producto->nombre      = 'ceviche chaufa con pato';
-            $producto->descripcion = 'Arroz chaufaa';
-            $producto->precio      = 59.99;
-            $producto->stock       = 20;
-
-
-            $producto->save();
-
+            $producto = Productos::find($datos['id']);
+            $producto->update($request->only(['nombre','descripcion','precio','stock']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Producto actualizado correctamente',
                 'data'    => $producto
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el producto',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
 
-
-    public function eliminarProducto($id)
+    public function eliminarProducto(Request $request)
     {
-    try {
-      
-        $producto = Productos::find($id);
+        try {
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:productos,id',
+            ]);
 
-        if (is_null($producto)) {
+            $producto = Productos::find($datos['id']);
+            $producto->delete();
+
             return response()->json([
                 'status'  => 200,
-                'message' => "No se encontro el producto con ID $id",
+                'message' => 'Producto eliminado correctamente',
                 'data'    => null
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status'  => 300,
+                'message' => 'Error al eliminar el producto',
+                'error'   => $th->getMessage()
+            ], 300);
         }
-
-        $producto->delete();
-
-        return response()->json([
-            'status'  => 200,
-            'message' => 'Producto eliminado correctamente',
-            'data'    => null
-        ], 200);
-    }
-    catch (\Throwable $th) {
-        return response()->json([
-            'status'  => 300,
-            'message' => 'Error al eliminar el producto',
-            'error'   => $th->getMessage(),
-        ], 300);
-    }
     }
 }

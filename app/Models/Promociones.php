@@ -1,4 +1,5 @@
 <?php
+// app/Models/Promociones.php
 
 namespace App\Models;
 
@@ -9,14 +10,15 @@ class Promociones extends Model
 {
     use HasFactory;
 
-    protected $table = "promociones";
+    protected $table = 'promociones';
 
     protected $fillable = [
-        'id',
         'nombre',
         'descuento',
         'fecha_inicio',
         'fecha_fin',
     ];
+
     public $timestamps = false;
 }
+

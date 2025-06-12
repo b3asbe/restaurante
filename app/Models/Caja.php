@@ -1,4 +1,5 @@
 <?php
+// app/Models/Caja.php
 
 namespace App\Models;
 
@@ -12,7 +13,6 @@ class Caja extends Model
     protected $table = 'cierres_caja';
 
     protected $fillable = [
-        'id',
         'fecha',
         'total',
         'usuario_id',

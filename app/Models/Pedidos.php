@@ -1,4 +1,5 @@
 <?php
+// app/Models/Pedidos.php
 
 namespace App\Models;
 
@@ -12,11 +13,9 @@ class Pedidos extends Model
     protected $table = 'pedidos';
 
     protected $fillable = [
-        'id',
         'usuario_id',
         'mesa_id',
         'estado_id',
-        'fecha_creacion',
         'fecha_entrega',
     ];
 

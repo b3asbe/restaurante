@@ -1,4 +1,5 @@
 <?php
+// app/Models/Insumos.php
 
 namespace App\Models;
 
@@ -12,7 +13,6 @@ class Insumos extends Model
     protected $table = 'insumos';
 
     protected $fillable = [
-        'id',
         'nombre',
         'cantidad',
         'unidad',

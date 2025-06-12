@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/PromocionesController.php
 
 namespace App\Http\Controllers;
 
@@ -7,15 +8,12 @@ use Illuminate\Http\Request;
 
 class PromocionesController extends Controller
 {
-    /**
-     * Listar todas las promociones
-     */
-    public function promociones()
+    // Listar todas las promociones
+    public function promociones(Request $request)
     {
         try {
-            $elementoDB = Promociones::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = Promociones::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay promociones registradas',
@@ -23,114 +21,110 @@ class PromocionesController extends Controller
                 ], 200);
             }
 
-            // Preparar los datos para la respuesta
-            $dataPromociones = [];
-            foreach ($elementoDB as $promocion) {
-                $dataPromociones[] = [
-                    'Nombre'       => $promocion->nombre,
-                    'Descuento'    => $promocion->descuento,
-                    'FechaInicio'  => $promocion->fecha_inicio,
-                    'FechaFin'     => $promocion->fecha_fin,
-                ];
-            }
+            $data = $todos->map(fn($p) => [
+                'id'           => $p->id,
+                'nombre'       => $p->nombre,
+                'descuento'    => $p->descuento,
+                'fecha_inicio' => $p->fecha_inicio,
+                'fecha_fin'    => $p->fecha_fin,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Promociones obtenidas correctamente',
-                'data'    => $dataPromociones
+                'data'    => $data
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Ocurrió un problema al listar las promociones',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Insertar una nueva promoción
-     */
-    public function insertarPromocion()
+    // Insertar una nueva promoción
+    public function insertarPromocion(Request $request)
     {
         try {
-            $promo = new Promociones();
-            $promo->nombre       = 'Rebaja de verano';
-            $promo->descuento    = 20.00;
-            $promo->fecha_inicio = '2025-06-15';
-            $promo->fecha_fin    = '2025-07-15';
-            $promo->save();
+            $datos = $request->validate([
+                'nombre'       => 'required|string|unique:promociones,nombre',
+                'descuento'    => 'required|numeric|min:0',
+                'fecha_inicio' => 'required|date_format:Y-m-d',
+                'fecha_fin'    => 'required|date_format:Y-m-d|after_or_equal:fecha_inicio',
+            ]);
+
+            $promo = Promociones::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Promoción creada correctamente',
                 'data'    => $promo
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear la promoción',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Actualizar una promoción existente por su ID
-     */
-    public function actualizarPromocion($id)
+    // Actualizar una promoción existente
+    public function actualizarPromocion(Request $request)
     {
         try {
-            $promo = Promociones::find($id);
+            $datos = $request->validate([
+                'id'           => 'required|integer|exists:promociones,id',
+                'nombre'       => 'sometimes|required|string|unique:promociones,nombre,'.$request->id,
+                'descuento'    => 'sometimes|required|numeric|min:0',
+                'fecha_inicio' => 'sometimes|required|date_format:Y-m-d',
+                'fecha_fin'    => 'sometimes|required|date_format:Y-m-d|after_or_equal:fecha_inicio',
+            ]);
 
-            if (is_null($promo)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => 'No se encontró la promoción con ID ' . $id,
-                    'data'    => null
-                ], 200);
-            }
-
-            // Asignar nuevos valores (ejemplo hardcodeado)
-            $promo->nombre       = 'Descuento especial julio';
-            $promo->descuento    = 25.50;
-            $promo->fecha_inicio = '2025-07-01';
-            $promo->fecha_fin    = '2025-07-31';
-            $promo->save();
+            $promo = Promociones::find($datos['id']);
+            $promo->update($request->only(['nombre','descuento','fecha_inicio','fecha_fin']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Promoción actualizada correctamente',
                 'data'    => $promo
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar la promoción',
-                'data'    => null,
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Eliminar una promoción por su ID
-     */
-    public function eliminarPromocion($id)
+    // Eliminar una promoción
+    public function eliminarPromocion(Request $request)
     {
         try {
-            $promo = Promociones::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:promociones,id',
+            ]);
 
-            if (is_null($promo)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró la promoción con ID $id",
-                    'data'    => null
-                ], 200);
-            }
-
+            $promo = Promociones::find($datos['id']);
             $promo->delete();
 
             return response()->json([
@@ -138,12 +132,19 @@ class PromocionesController extends Controller
                 'message' => 'Promoción eliminada correctamente',
                 'data'    => null
             ], 200);
-        }
-        catch (\Throwable $th) {
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
+        } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar la promoción',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

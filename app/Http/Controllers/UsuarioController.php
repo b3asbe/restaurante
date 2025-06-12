@@ -1,19 +1,20 @@
 <?php
+// app/Http/Controllers/UsuarioController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\Usuario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UsuarioController extends Controller
 {
-
-    public function usuarios()
+    // Listar usuarios
+    public function usuarios(Request $request)
     {
         try {
-            $elementoDB = Usuario::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = Usuario::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay usuarios registrados',
@@ -21,102 +22,117 @@ class UsuarioController extends Controller
                 ], 200);
             }
 
-            $dataUsuarios = [];
-            foreach ($elementoDB as $usuario) {
-                $dataUsuarios[] = [
-                    'Nombre'  => $usuario->nombre,
-                    'Correo'  => $usuario->correo,
-                    'RolId'   => $usuario->rol_id,
-                ];
-            }
+            $data = $todos->map(fn($u) => [
+                'id'      => $u->id,
+                'nombre'  => $u->nombre,
+                'correo'  => $u->correo,
+                'rol_id'  => $u->rol_id,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Información obtenida correctamente',
-                'data'    => $dataUsuarios
+                'data'    => $data
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
-                'message' => 'Ocurrió un problema',
-                'data'    => null
+                'message' => 'Ocurrió un problema al listar usuarios',
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    //Insertar un Usuario
-    public function insertarUsuario()
+    // Insertar un usuario
+    public function insertarUsuario(Request $request)
     {
         try {
-            $usuario = new Usuario();
-            $usuario->nombre      = 'Andre Santos';
-            $usuario->correo      = 'andrez@gmail.com';
-            $usuario->contraseña  = bcrypt('123456');
-            $usuario->rol_id      = 1;
-            $usuario->save();
+            $datos = $request->validate([
+                'nombre'       => 'required|string',
+                'correo'       => 'required|email|unique:usuarios,correo',
+                'contraseña'   => 'required|string|min:6',
+                'rol_id'       => 'required|integer|exists:roles,id',
+            ]);
+
+            // Encriptar contraseña
+            $datos['contraseña'] = Hash::make($datos['contraseña']);
+
+            $usuario = Usuario::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Usuario creado correctamente',
                 'data'    => $usuario
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el usuario',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    //Actualizar Usuario
-    public function actualizarUsuario($id)
+    // Actualizar un usuario
+    public function actualizarUsuario(Request $request)
     {
         try {
-            $usuario = Usuario::find($id);
+            $datos = $request->validate([
+                'id'           => 'required|integer|exists:usuarios,id',
+                'nombre'       => 'sometimes|required|string',
+                'correo'       => 'sometimes|required|email|unique:usuarios,correo',
+                'contraseña'   => 'sometimes|required|string|min:6',
+                'rol_id'       => 'sometimes|required|integer|exists:roles,id',
+            ]);
 
-            if (is_null($usuario)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el usuario con ID {$id}",
-                    'data'    => null
-                ], 200);
+            $usuario = Usuario::find($datos['id']);
+
+            if (isset($datos['contraseña'])) {
+                $datos['contraseña'] = Hash::make($datos['contraseña']);
             }
 
-            $usuario->nombre      = 'Mariela Gómez';
-            $usuario->correo      = 'mariela@gmail.com';
-            $usuario->contraseña  = bcrypt('zzzzzzz');
-            $usuario->rol_id      = 2;
-            $usuario->save();
+            $usuario->update($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Usuario actualizado correctamente',
                 'data'    => $usuario
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el usuario',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    //Eliminar Usuario
-    public function eliminarUsuario($id)
+    // Eliminar un usuario
+    public function eliminarUsuario(Request $request)
     {
         try {
-            $usuario = Usuario::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:usuarios,id',
+            ]);
 
-            if (is_null($usuario)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el usuario con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
+            $usuario = Usuario::find($datos['id']);
             $usuario->delete();
 
             return response()->json([
@@ -124,11 +140,19 @@ class UsuarioController extends Controller
                 'message' => 'Usuario eliminado correctamente',
                 'data'    => null
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar el usuario',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }

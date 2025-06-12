@@ -1,4 +1,5 @@
 <?php
+// app/Models/Menus.php
 
 namespace App\Models;
 
@@ -12,12 +13,11 @@ class Menus extends Model
     protected $table = 'menus';
 
     protected $fillable = [
-        'id',
         'nombre',
         'descripcion',
     ];
+
     public $timestamps = false;
 }
-
 
 

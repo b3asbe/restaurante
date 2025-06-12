@@ -1,4 +1,5 @@
 <?php
+// app/Http/Controllers/PedidosController.php
 
 namespace App\Http\Controllers;
 
@@ -7,15 +8,12 @@ use Illuminate\Http\Request;
 
 class PedidosController extends Controller
 {
-    /**
-     * Listar todos los pedidos.
-     */
-    public function pedidos()
+    // Listar todos los pedidos
+    public function pedidos(Request $request)
     {
         try {
-            $elementoDB = Pedidos::all();
-
-            if ($elementoDB->isEmpty()) {
+            $todos = Pedidos::all();
+            if ($todos->isEmpty()) {
                 return response()->json([
                     'status'  => 200,
                     'message' => 'No hay pedidos registrados',
@@ -23,131 +21,126 @@ class PedidosController extends Controller
                 ], 200);
             }
 
-            $data = [];
-            foreach ($elementoDB as $item) {
-                $data[] = [
-                    'Id'             => $item->id,
-                    'UsuarioId'      => $item->usuario_id,
-                    'MesaId'         => $item->mesa_id,
-                    'EstadoId'       => $item->estado_id,
-                    'FechaCreacion'  => $item->fecha_creacion,
-                    'FechaEntrega'   => $item->fecha_entrega,
-                ];
-            }
+            $data = $todos->map(fn($p) => [
+                'id'             => $p->id,
+                'usuario_id'     => $p->usuario_id,
+                'mesa_id'        => $p->mesa_id,
+                'estado_id'      => $p->estado_id,
+                'fecha_creacion' => $p->fecha_creacion,
+                'fecha_entrega'  => $p->fecha_entrega,
+            ]);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Pedidos obtenidos correctamente',
                 'data'    => $data
             ], 200);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al listar los pedidos',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Insertar un nuevo pedido.
-     * (Ejemplo con valores estáticos: usuario_id=1, mesa_id=1, estado_id=1)
-     */
-    public function insertarPedido()
+    // Insertar un nuevo pedido
+    public function insertarPedido(Request $request)
     {
         try {
-            $pedido = new Pedidos();
-            $pedido->usuario_id     = 1;                     // Ejemplo: usuario_id
-            $pedido->mesa_id        = 1;                     // Ejemplo: mesa_id
-            $pedido->estado_id      = 1;                     // Ejemplo: estado_id
-            // fecha_creacion se asigna automáticamente por defecto en la BD
-            $pedido->fecha_entrega  = now()->addMinutes(30); // Ejemplo: 30 minutos después
-            $pedido->save();
+            $datos = $request->validate([
+                'usuario_id'    => 'required|integer|exists:usuarios,id',
+                'mesa_id'       => 'required|integer|exists:mesas,id',
+                'estado_id'     => 'required|integer|exists:estados,id',
+                'fecha_entrega' => 'required|date_format:Y-m-d H:i:s',
+            ]);
+
+            // fecha_creacion se asigna en BD por defecto
+            $pedido = Pedidos::create($datos);
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Pedido creado correctamente',
                 'data'    => [
-                    'Id'             => $pedido->id,
-                    'UsuarioId'      => $pedido->usuario_id,
-                    'MesaId'         => $pedido->mesa_id,
-                    'EstadoId'       => $pedido->estado_id,
-                    'FechaCreacion'  => $pedido->fecha_creacion,
-                    'FechaEntrega'   => $pedido->fecha_entrega,
+                    'id'             => $pedido->id,
+                    'usuario_id'     => $pedido->usuario_id,
+                    'mesa_id'        => $pedido->mesa_id,
+                    'estado_id'      => $pedido->estado_id,
+                    'fecha_creacion' => $pedido->fecha_creacion,
+                    'fecha_entrega'  => $pedido->fecha_entrega,
                 ]
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al crear el pedido',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Actualizar un pedido existente.
-     * Por ejemplo, cambiar estado_id a 2 y asignar nueva fecha_entrega.
-     *
-     * @param int $id
-     */
-    public function actualizarPedido($id)
+    // Actualizar un pedido existente
+    public function actualizarPedido(Request $request)
     {
         try {
-            $pedido = Pedidos::find($id);
+            $datos = $request->validate([
+                'id'             => 'required|integer|exists:pedidos,id',
+                'usuario_id'     => 'sometimes|required|integer|exists:usuarios,id',
+                'mesa_id'        => 'sometimes|required|integer|exists:mesas,id',
+                'estado_id'      => 'sometimes|required|integer|exists:estados,id',
+                'fecha_entrega'  => 'sometimes|required|date_format:Y-m-d H:i:s',
+            ]);
 
-            if (is_null($pedido)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el pedido con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
-            // Ejemplo de actualización:
-            $pedido->estado_id     = 2;                     // Nuevo estado_id
-            $pedido->fecha_entrega = now()->addMinutes(45); // Nueva fecha de entrega
-            $pedido->save();
+            $pedido = Pedidos::find($datos['id']);
+            $pedido->update($request->only(['usuario_id','mesa_id','estado_id','fecha_entrega']));
 
             return response()->json([
                 'status'  => 200,
                 'message' => 'Pedido actualizado correctamente',
                 'data'    => [
-                    'Id'             => $pedido->id,
-                    'UsuarioId'      => $pedido->usuario_id,
-                    'MesaId'         => $pedido->mesa_id,
-                    'EstadoId'       => $pedido->estado_id,
-                    'FechaCreacion'  => $pedido->fecha_creacion,
-                    'FechaEntrega'   => $pedido->fecha_entrega,
+                    'id'             => $pedido->id,
+                    'usuario_id'     => $pedido->usuario_id,
+                    'mesa_id'        => $pedido->mesa_id,
+                    'estado_id'      => $pedido->estado_id,
+                    'fecha_creacion' => $pedido->fecha_creacion,
+                    'fecha_entrega'  => $pedido->fecha_entrega,
                 ]
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'Datos inválidos',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al actualizar el pedido',
-                'data'    => null
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
 
-    /**
-     * Eliminar un pedido por su ID.
-     *
-     * @param int $id
-     */
-    public function eliminarPedido($id)
+    // Eliminar un pedido
+    public function eliminarPedido(Request $request)
     {
         try {
-            $pedido = Pedidos::find($id);
+            $datos = $request->validate([
+                'id' => 'required|integer|exists:pedidos,id',
+            ]);
 
-            if (is_null($pedido)) {
-                return response()->json([
-                    'status'  => 200,
-                    'message' => "No se encontró el pedido con ID {$id}",
-                    'data'    => null
-                ], 200);
-            }
-
+            $pedido = Pedidos::find($datos['id']);
             $pedido->delete();
 
             return response()->json([
@@ -155,11 +148,19 @@ class PedidosController extends Controller
                 'message' => 'Pedido eliminado correctamente',
                 'data'    => null
             ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status'  => 422,
+                'message' => 'ID inválido',
+                'errors'  => $e->errors()
+            ], 422);
+
         } catch (\Throwable $th) {
             return response()->json([
                 'status'  => 300,
                 'message' => 'Error al eliminar el pedido',
-                'error'   => $th->getMessage(),
+                'error'   => $th->getMessage()
             ], 300);
         }
     }
